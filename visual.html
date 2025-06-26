@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar Energy Potential</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        #map { height: 500px; }
+        #result { margin-top: 20px; }
+        .energy-table { width: 100%; border-collapse: collapse; }
+        .energy-table th, .energy-table td { padding: 8px; text-align: center; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="result"></div>
+
+    <script>
+        const map = L.map('map').setView([42.6977, 23.3219], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+        map.on('click', function(event) {
+            const lat = event.latlng.lat;
+            const lon = event.latlng.lng;
+
+            console.log("Clicked coordinates: ", lat, lon);
+
+            $.ajax({
+                url: 'http://127.0.0.1:5000/calculate_energy',
+                method: 'POST',
+                data: JSON.stringify({ latitude: lat, longitude: lon }),
+                contentType: 'application/json',
+                success: function(response) {
+                    console.log("Received response from backend: ", response);
+
+                    if (response.outputs) {
+                        let energyHtml = '<h3>Потенциална електроенергия (kWh)</h3>';
+                        energyHtml += '<table class="energy-table"><tr><th>Месец</th><th>Количество енергия (kWh)</th></tr>';
+
+                        const months = ['Януари', 'Февруари', 'Март', 'Април', 'Май', 'Юни', 'Юли', 'Авгусв', 'Септември', 'Октомври', 'Ноември', 'Декември'];
+
+                        for (let i = 0; i < 12; i++) {
+                            energyHtml += `<tr><td>${months[i]}</td><td>${response.outputs.ac_monthly[i].toFixed(2)}</td></tr>`;
+                        }
+                        energyHtml += '</table>';
+
+                        $('#result').html(energyHtml);
+                    } else {
+                        alert("No energy data received.");
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.log("Error sending request: ", status, error);
+                    alert('Error calculating energy potential');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
